@@ -1,0 +1,30 @@
+package com.JsonToPojo.Convert;
+
+import java.util.Map;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+public class JsonConverter {
+	
+	public static void main(String[] args) {
+		
+		String inputJson = " ";
+		
+		ObjectMapper mapper = new ObjectMapper();
+		
+		// Converting String to Map
+		try {
+			
+			Map<String, Object> jsonMap = mapper.readValue(jsonString, Map.class);
+	          
+			
+			
+		}catch(Exception e) {
+			
+		}
+
+		
+	}
+	
+	
+}

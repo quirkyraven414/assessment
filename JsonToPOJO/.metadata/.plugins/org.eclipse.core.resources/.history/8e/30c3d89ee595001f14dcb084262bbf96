@@ -1,0 +1,41 @@
+package com.JsonToPojo.Convert;
+
+import java.util.Map;
+
+import com.JsonToPojo.entity.PojoEntity;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+public class JsonConverter {
+	
+//	private String prodName;
+//	
+//	private float prodPrice;
+//	
+//	private int prodId;
+//		
+//	private double prodWeight;
+	
+	public static void main(String[] args) {
+		
+		String inputJson = "{\"prodId\":1,\"prodName\":\"Laptop\",\"prodPrice\":999.99,\"prodWeight\":2.5}";
+		
+		ObjectMapper mapper = new ObjectMapper();
+		
+		// Converting String to Map
+		try {
+			
+//			Map<String, Object> jsonMap = mapper.readValue(inputJson, Map.class);
+			
+			PojoEntity product = mapper.readValue(inputJson, PojoEntity.class);
+						
+			System.out.println(product.getProdId());
+			
+		}catch(Exception e) {
+			
+		}
+
+		
+	}
+	
+	
+}

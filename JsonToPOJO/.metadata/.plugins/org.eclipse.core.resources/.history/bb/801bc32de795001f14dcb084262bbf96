@@ -1,0 +1,22 @@
+package com.JsonToPojo.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+public class PojoEntity {
+	
+	private String prodName;
+	
+	private float prodPrice;
+	
+	private int prodId;
+		
+	private double prodWeight;
+	
+}

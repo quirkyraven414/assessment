@@ -1,0 +1,5 @@
+package com.JsonToPojo.entity;
+
+public class PojoEntity {
+
+}
