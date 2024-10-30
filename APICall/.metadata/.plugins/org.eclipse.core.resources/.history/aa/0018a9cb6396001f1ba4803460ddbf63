@@ -1,0 +1,49 @@
+package com.weatherControl.limiter;
+
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import com.weatherControl.request.WeatherRequest;
+
+public class LeakyBucket {
+	
+	private final int maxCallsPerMinute;
+    private final BlockingQueue<WeatherRequest> queue;
+    private int callsMade = 0;
+    
+    public LeakyBucket(int maxCallsPerMinute) {
+        this.maxCallsPerMinute = maxCallsPerMinute;
+        this.queue = new ArrayBlockingQueue<>(100); 
+
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        scheduler.scheduleAtFixedRate(this::drainBucket, 0, 4, TimeUnit.SECONDS); // 60 / 15 = 4 seconds
+    }
+    
+    private void drainBucket() {
+        if (callsMade < maxCallsPerMinute) {
+            WeatherRequest request = queue.poll(); // Retrieve and remove the head of the queue
+            if (request != null) {
+                request.getService().makeApiCall(request.getplace());
+                callsMade++;
+            }
+        } else {
+            resetCallCount();
+        }
+    }
+
+    private void resetCallCount() {
+        callsMade = 0;
+    }
+    
+    public void queueApiCall(WeatherRequest request) {
+        try {
+            queue.put(request); // Blocks if the queue is full
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.err.println("Failed to queue API call: " + e.getMessage());
+        }
+    }
+}

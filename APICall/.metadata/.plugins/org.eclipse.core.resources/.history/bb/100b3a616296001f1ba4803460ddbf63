@@ -1,0 +1,5 @@
+package com.weatherControl.request;
+
+public class WeatherRequest {
+
+}

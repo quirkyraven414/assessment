@@ -1,0 +1,23 @@
+package com.weatherControl.request;
+
+import com.weatherControl.serivce.WeatherService;
+
+public class WeatherRequest {
+	
+	private final String timestamp;
+    private final WeatherService service;
+
+    public WeatherRequest(String timestamp, WeatherService service) {
+        this.timestamp = timestamp;
+        this.service = service;
+    }
+
+    public String getTimestamp() {
+        return timestamp;
+    }
+
+    public WeatherService getService() {
+        return service;
+    }
+
+}

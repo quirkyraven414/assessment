@@ -1,0 +1,20 @@
+package com.weatherControl.controller;
+
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class WeatherController {
+	
+	private final WeatherService weatherService;
+
+    public WeatherController(WeatherService weatherService) {
+        this.weatherService = weatherService;
+    }
+
+    @GetMapping("/weather")
+    public String getWeather(@RequestParam String timestamp) {
+        weatherService.getWeather(timestamp);
+        return "Weather request queued for timestamp: " + timestamp;
+    }
+
+}

@@ -1,0 +1,23 @@
+package com.weatherControl.serivce;
+
+import org.springframework.stereotype.Service;
+
+import com.weatherControl.limiter.LeakyBucket;
+
+@Service
+public class WeatherService {
+	
+	public void getWeather(String timestamp) {
+		
+		final String apiUrl = "https://api.weather.com/v1/your-endpoint"; 
+		final LeakyBucket leakyBucket;
+
+	    public WeatherService(LeakyBucket leakyBucket) {
+	        this.leakyBucket = leakyBucket;
+	    }
+	    
+        WeatherRequest request = new WeatherRequest(timestamp, this);
+        leakyBucket.queueApiCall(request);
+    }
+
+}

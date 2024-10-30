@@ -1,0 +1,5 @@
+package com.weatherControl.serivce;
+
+public class WeatherService {
+
+}
