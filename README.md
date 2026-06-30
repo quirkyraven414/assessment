@@ -518,7 +518,3 @@ graph LR
 9. **WebSocket Server**
    - Subscribes to Redis Pub/Sub
    - Broadcasts to web clients
-
-
-✅ **Kept:** OpenSearch (alerts only) + Superset (dashboards)  
-✅ **Result:** Simpler, easier to explain, still production-grade!
