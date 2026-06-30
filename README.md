@@ -12,7 +12,7 @@ graph TB
     end
 
     subgraph API_GATEWAY["⚡ API GATEWAY LAYER"]
-        LB["Load Balancer<br/>(Nginx - IPv4)<br/>• Round Robin<br/>• Health Checks<br/>• SSL Termination<br/>• Rate Limiting"]
+        LB["Load Balancer<br/>(Nginx - IPv4)<br/>• Round Robin<br/>• Health Checks<br/>• SSL Termination"]
         
         subgraph API_NODES["API Nodes (NestJS)"]
             API1["API Node 1<br/>Endpoints:<br/>• POST /telemetry<br/>• GET /devices/:id/latest<br/>• GET /alerts<br/>• POST /devices<br/>• GET /health"]
@@ -23,10 +23,9 @@ graph TB
 
     subgraph API_PROCESSING["🔄 API PROCESSING PIPELINE"]
         AUTH["Step 1: AUTHENTICATION<br/>• Validate API Key<br/>• Check device exists<br/>• Return 401 if invalid"]
-        RATE["Step 2: RATE LIMITING<br/>• 100 requests/min per device<br/>• Return 429 if exceeded"]
-        IDEMP["Step 3: REDIS IDEMPOTENCY<br/>• Key: idempotency:{device_id}<br/>• TTL: 10 seconds<br/>• Return cached if exists"]
-        VALID["Step 4: VALIDATION<br/>• device_id: Required<br/>• temperature: 0-60°C<br/>• voltage: 0-500V<br/>• current: 0-100A<br/>• timestamp: Not future, max 5min late<br/>• energy_kwh: >= 0"]
-        ENRICH["Step 5: ENRICH & PRODUCE<br/>• Generate message_id (UUID)<br/>• Add ingested_at<br/>• Update device.last_seen_at<br/>• Produce to Kafka"]
+        IDEMP["Step 2: REDIS IDEMPOTENCY<br/>• Key: idempotency:{device_id}<br/>• TTL: 10 seconds<br/>• Return cached if exists"]
+        VALID["Step 3: VALIDATION<br/>• device_id: Required<br/>• temperature: 0-60°C<br/>• voltage: 0-500V<br/>• current: 0-100A<br/>• timestamp: Not future, max 5min late<br/>• energy_kwh: >= 0"]
+        ENRICH["Step 4: ENRICH & PRODUCE<br/>• Generate message_id (UUID)<br/>• Add ingested_at<br/>• Update device.last_seen_at<br/>• Produce to Kafka"]
     end
 
     INVALID_DB[("PostgreSQL<br/>invalid_messages<br/>• message_id<br/>• device_id<br/>• telemetry_message<br/>• reason_for_failure<br/>• rejected_at")]
@@ -93,8 +92,7 @@ graph TB
 
     %% API Processing Pipeline
     API1 & API2 & APIN --> AUTH
-    AUTH --> RATE
-    RATE --> IDEMP
+    AUTH --> IDEMP
     IDEMP --> VALID
     VALID -->|"PASSED"| ENRICH
     VALID -->|"FAILED"| INVALID_DB
@@ -513,7 +511,7 @@ graph LR
 1. **Load Balancer (Nginx - IPv4)**
    - Simple round-robin load balancing
    - SSL termination
-   - Rate limiting
+   - Health checks
 
 2. **API Layer (NestJS)**
    - Authentication, validation, idempotency
