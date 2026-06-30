@@ -15,10 +15,21 @@ class DatabaseService {
       password: config.database.password,
       min: config.database.poolMin,
       max: config.database.poolMax,
+      connectionTimeoutMillis: config.database.connectionTimeoutMillis || 5000,
+      idleTimeoutMillis: config.database.idleTimeoutMillis || 30000,
+      statement_timeout: config.database.statementTimeout || 10000,
     });
 
     this.pool.on('error', (err) => {
       logger.error('Unexpected database error', { error: err.message });
+    });
+
+    this.pool.on('connect', () => {
+      logger.debug('New database connection established');
+    });
+
+    this.pool.on('remove', () => {
+      logger.debug('Database connection removed from pool');
     });
   }
 

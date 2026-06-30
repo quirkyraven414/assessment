@@ -10,8 +10,11 @@
     "database": "iot_telemetry",
     "user": "postgres",
     "password": "postgres",
-    "poolMin": 2,
-    "poolMax": 10
+    "poolMin": 5,
+    "poolMax": 30,
+    "connectionTimeoutMillis": 5000,
+    "idleTimeoutMillis": 30000,
+    "statementTimeout": 10000
   },
   "redis": {
     "host": "localhost",

@@ -32,7 +32,7 @@ async function processMessage(message: KafkaMessage): Promise<void> {
     timestamp: message.timestamp,
   });
 
-  await redisService.publish(`telemetry:device:${message.device_id}`, {
+  const telemetryData = {
     device_id: message.device_id,
     temperature: message.temperature,
     voltage: message.voltage,
@@ -40,7 +40,10 @@ async function processMessage(message: KafkaMessage): Promise<void> {
     energy_kwh: message.energy_kwh,
     status: message.status,
     timestamp: message.timestamp,
-  });
+  };
+  
+  await redisService.publish(`telemetry:device:${message.device_id}`, telemetryData);
+  
 
   logger.debug('Message processed', { device_id: message.device_id, message_id: message.message_id });
 }

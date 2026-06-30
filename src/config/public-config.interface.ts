@@ -12,6 +12,9 @@ export interface IPublicConfig {
     password: string;
     poolMin: number;
     poolMax: number;
+    connectionTimeoutMillis?: number;
+    idleTimeoutMillis?: number;
+    statementTimeout?: number;
   };
   redis: {
     host: string;
