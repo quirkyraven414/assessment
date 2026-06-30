@@ -2,8 +2,6 @@
 
 ## Complete System Architecture
 
-### This is a indepth flow the overview.md consists of the overview of the HLD
-
 ```mermaid
 graph TB
     subgraph DEVICE_LAYER["🌐 DEVICE LAYER"]
@@ -56,11 +54,11 @@ graph TB
         PROC_CONSUMER["Processor Consumer<br/>For each batch (500 msgs):<br/>1. Parse messages<br/>2. Batch INSERT to DB<br/>3. Evaluate alert rules<br/>4. Store alerts in DB<br/>5. Publish to Redis Pub/Sub<br/>6. Commit Kafka offsets"]
         
         subgraph STORAGE["Storage Components"]
-            DB[("PostgreSQL + TimescaleDB<br/>Tables:<br/>1. devices<br/>2. telemetry (hypertable)<br/>3. alerts<br/>4. invalid_messages<br/><br/>UNIQUE: (device_id, timestamp, message_id)<br/>Scaling: Read replicas, Sharding, Compression (90%)")]
+            DB[("PostgreSQL + TimescaleDB<br/>Tables:<br/>1. devices<br/>2. telemetry (hypertable)<br/>3. alerts<br/>4. alert_rules (device-specific)<br/>5. invalid_messages<br/><br/>UNIQUE: (device_id, timestamp, message_id)<br/>Scaling: Read replicas, Sharding, Compression (90%)")]
             
             REDIS_CACHE[("Redis<br/>Keys:<br/>• idempotency:{id} (TTL: 10s)<br/><br/>Performance:<br/>• GET: < 1ms<br/>• SET: < 1ms")]
             
-            ALERT_ENGINE["Alert Engine<br/>Rules:<br/>1. Temp > 30°C (HIGH)<br/>2. Temp > 50°C (CRITICAL)<br/>3. Energy spike > 50% (MEDIUM)<br/>4. Device offline (HIGH)<br/>5. Voltage abnormal (MEDIUM)<br/>6. Current > 80A (HIGH)<br/>7. All zeros (MEDIUM)<br/>8. Rapid changes (MEDIUM)<br/><br/>Output:<br/>• Store in alerts table<br/>• Publish to Redis Pub/Sub"]
+            ALERT_ENGINE["Alert Engine<br/>Device-Specific Rules:<br/>• Loaded from alert_rules table<br/>• Each device has custom thresholds<br/>• Range-based evaluation (min/max)<br/>• Example: DEV001 temp 15-25°C<br/>• Example: DEV002 current 50-80A<br/>• Example: DEV003 voltage 220-230V<br/><br/>Evaluation:<br/>• Filter rules by device_id<br/>• Check metric against thresholds<br/>• Trigger if outside range<br/><br/>Output:<br/>• Store in alerts table<br/>• Publish to Redis Pub/Sub"]
         end
     end
 
@@ -297,6 +295,81 @@ graph LR
 
 ---
 
+## Database Schema Diagram
+
+```mermaid
+erDiagram
+    DEVICES ||--o{ TELEMETRY : "has"
+    DEVICES ||--o{ ALERTS : "triggers"
+    DEVICES ||--o{ INVALID_MESSAGES : "sends"
+    DEVICES ||--o{ ALERT_RULES : "configures"
+
+    DEVICES {
+        varchar device_id PK
+        varchar device_name
+        varchar device_type
+        text address
+        varchar api_key UK
+        timestamptz last_seen_at
+        varchar status
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    ALERT_RULES {
+        int id PK
+        varchar device_id FK "Device-specific rules"
+        varchar rule_name "e.g., TEMPERATURE_HIGH"
+        varchar severity "LOW, MEDIUM, HIGH, CRITICAL"
+        varchar metric_field "temperature, voltage, current, energy_kwh"
+        decimal threshold_min "Lower bound (optional)"
+        decimal threshold_max "Upper bound (optional)"
+        text message_template "Alert message with placeholders"
+        boolean enabled
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    TELEMETRY {
+        uuid id PK
+        uuid message_id
+        varchar device_id FK
+        timestamptz timestamp
+        decimal temperature
+        decimal energy_kwh
+        decimal voltage
+        decimal current
+        varchar status
+        timestamptz ingested_at
+    }
+
+    ALERTS {
+        uuid id PK
+        varchar alert_id UK
+        varchar device_id FK
+        varchar alert_type
+        varchar severity
+        text message
+        timestamptz triggered_at
+        jsonb context
+        boolean acknowledged
+        timestamptz acknowledged_at
+        varchar acknowledged_by
+    }
+
+    INVALID_MESSAGES {
+        uuid id PK
+        uuid message_id
+        varchar device_id
+        timestamptz timestamp
+        jsonb telemetry_message
+        text reason_for_failure
+        timestamptz rejected_at
+    }
+```
+
+---
+
 ## Scaling Strategy Diagram
 
 ```mermaid
@@ -419,6 +492,34 @@ graph LR
 
 ---
 
+## How to Use These Diagrams
+
+1. **Copy the Mermaid code** from any section above
+2. **Paste into:**
+   - GitHub README.md (renders automatically)
+   - Mermaid Live Editor: https://mermaid.live
+   - VS Code with Mermaid extension
+   - Notion, Confluence, or other tools that support Mermaid
+
+3. **Customize colors, labels, or structure** as needed
+
+---
+
+## Notes
+
+- All diagrams are **production-ready** and cover the complete architecture
+- Use the **Complete System Architecture** for high-level overview
+- Use the **Simplified Data Flow** for explaining request flow
+- Use the **Component Interaction** for system integration
+- Use the **Database Schema** for data modeling
+- Use the **Scaling Strategy** for capacity planning
+- Use the **Alert Rules Flow** for alert logic
+- Use the **Redis Pub/Sub Fanout** for real-time architecture
+
+---
+
+## 🎯 **Simplified Architecture Summary (Interview-Ready)**
+
 ### **Key Components (Easy to Explain)**
 
 1. **Load Balancer (Nginx - IPv4)**
@@ -460,3 +561,106 @@ graph LR
 9. **WebSocket Server**
    - Subscribes to Redis Pub/Sub
    - Broadcasts to web clients
+
+### **Why This Stack?**
+
+- **Simple to deploy:** All components run in Docker
+- **Easy to explain:** Clear separation of concerns
+- **Production-ready:** Handles 1000s of devices
+- **Scalable:** Can grow to 100K devices
+- **Interview-friendly:** Not over-engineered
+
+### **What We Removed (Kept Simple)**
+
+❌ Prometheus + Grafana (complex metrics)  
+❌ ELK Stack (complex logging)  
+❌ Jaeger (complex tracing)  
+❌ PagerDuty/Slack (system alerts)  
+
+✅ **Kept:** OpenSearch (alerts only) + Superset (dashboards)  
+✅ **Result:** Simpler, easier to explain, still production-grade!
+
+---
+
+## 🎯 **Device-Specific Alert Rules (Key Feature)**
+
+### **Why Device-Specific Rules?**
+
+Instead of global rules that apply to all devices, each device can have **custom alert thresholds** based on its type and environment.
+
+### **Example: Different Rules for Different Devices**
+
+```
+DEV001 (Temperature Sensor in Server Room):
+  - TEMPERATURE_NORMAL: 15-25°C (LOW)
+  - TEMPERATURE_HIGH: 30-40°C (HIGH)
+  - TEMPERATURE_CRITICAL: >40°C (CRITICAL)
+
+DEV002 (Energy Meter in Factory):
+  - CURRENT_WARNING: 50-80A (MEDIUM)
+  - CURRENT_CRITICAL: >80A (CRITICAL)
+  - ENERGY_HIGH: >100 kWh (HIGH)
+
+DEV003 (Voltage Monitor in Data Center):
+  - VOLTAGE_OPTIMAL: 220-230V (LOW - informational)
+  - VOLTAGE_LOW: <210V (HIGH)
+  - VOLTAGE_HIGH: >240V (HIGH)
+```
+
+### **How It Works**
+
+1. **Database Table:** `alert_rules`
+   - Each rule belongs to a specific `device_id`
+   - Stores `threshold_min` and `threshold_max` for range-based checks
+   - Unique constraint: `(device_id, rule_name)`
+
+2. **Alert Evaluation:**
+   ```typescript
+   // Filter rules for this device only
+   const deviceRules = allRules.filter(r => r.device_id === telemetry.device_id);
+   
+   // Check each rule
+   for (const rule of deviceRules) {
+     const value = telemetry[rule.metric_field];
+     
+     // Trigger if outside range
+     if (value < rule.threshold_min || value > rule.threshold_max) {
+       createAlert(rule, telemetry);
+     }
+   }
+   ```
+
+3. **Benefits:**
+   - ✅ **Flexible:** Each device has custom thresholds
+   - ✅ **Scalable:** Add new rules without code changes
+   - ✅ **Maintainable:** Rules stored in database, not hardcoded
+   - ✅ **Type-safe:** TypeScript interfaces ensure correctness
+
+### **Sample Rules in Database**
+
+```sql
+-- DEV001: Strict temperature monitoring
+INSERT INTO alert_rules (device_id, rule_name, severity, metric_field, threshold_min, threshold_max, message_template)
+VALUES 
+  ('DEV001', 'TEMPERATURE_HIGH', 'HIGH', 'temperature', 30, 40, 'Temperature {temperature}°C exceeds safe threshold'),
+  ('DEV001', 'VOLTAGE_RANGE', 'MEDIUM', 'voltage', 210, 240, 'Voltage {voltage}V outside normal range');
+
+-- DEV002: Focus on current and energy
+INSERT INTO alert_rules (device_id, rule_name, severity, metric_field, threshold_min, threshold_max, message_template)
+VALUES 
+  ('DEV002', 'CURRENT_CRITICAL', 'CRITICAL', 'current', 80, NULL, 'Current {current}A exceeds safe limit'),
+  ('DEV002', 'ENERGY_HIGH', 'HIGH', 'energy_kwh', 100, NULL, 'Energy consumption {energy_kwh} kWh is very high');
+```
+
+### **Key Difference from Global Rules**
+
+**Before (Global Rules):**
+- ❌ All devices use same thresholds
+- ❌ Can't customize per device type
+- ❌ Hardcoded in application logic
+
+**After (Device-Specific Rules):**
+- ✅ Each device has custom thresholds
+- ✅ Stored in database table
+- ✅ Easy to add/modify without code changes
+- ✅ Supports range-based checks (min/max)
