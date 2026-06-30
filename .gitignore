@@ -19,6 +19,7 @@ logs/
 *.log
 npm-debug.log*
 
+*.sh
 # IDE
 .vscode/
 .idea/
