@@ -1,0 +1,42 @@
+{
+  "server": {
+    "nodeEnv": "production",
+    "apiPort": 3000,
+    "websocketPort": 3001
+  },
+  "database": {
+    "host": "your-db.abc123.us-east-1.rds.amazonaws.com",
+    "port": 5432,
+    "database": "iot_telemetry",
+    "user": "iot_admin",
+    "password": "LOADED_FROM_SECRETS_JSON",
+    "poolMin": 5,
+    "poolMax": 20
+  },
+  "redis": {
+    "host": "your-redis.abc123.use1.cache.amazonaws.com",
+    "port": 6379,
+    "password": "LOADED_FROM_SECRETS_JSON"
+  },
+  "kafka": {
+    "brokers": [
+      "b-1.your-cluster.abc123.kafka.us-east-1.amazonaws.com:9092",
+      "b-2.your-cluster.abc123.kafka.us-east-1.amazonaws.com:9092",
+      "b-3.your-cluster.abc123.kafka.us-east-1.amazonaws.com:9092"
+    ],
+    "clientId": "iot-telemetry-prod",
+    "groupId": "telemetry-processors-prod",
+    "topic": "telemetry.raw"
+  },
+  "opensearch": {
+    "node": "https://your-domain.us-east-1.es.amazonaws.com",
+    "username": "LOADED_FROM_SECRETS_JSON",
+    "password": "LOADED_FROM_SECRETS_JSON",
+    "index": "iot-alerts"
+  },
+  "application": {
+    "idempotencyTtlSeconds": 10,
+    "lateEventMaxMinutes": 5,
+    "offlineDeviceThresholdMinutes": 5
+  }
+}

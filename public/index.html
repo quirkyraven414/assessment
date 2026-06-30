@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Telemetry - Live Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            color: #555;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+        }
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .data-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .data-item label {
+            display: block;
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        .data-item value {
+            display: block;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .alert-box {
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid;
+        }
+        .alert-box.CRITICAL {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        .alert-box.HIGH {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        .alert-box.MEDIUM {
+            background: #d1ecf1;
+            border-left-color: #17a2b8;
+        }
+        .alert-box.LOW {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        .alert-box .alert-type {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .alert-box .alert-message {
+            color: #666;
+        }
+        .no-data {
+            color: #999;
+            font-style: italic;
+        }
+        .timestamp {
+            color: #999;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌡️ IoT Telemetry - Live Dashboard</h1>
+        
+        <div id="status" class="status disconnected">
+            ⚫ Disconnected
+        </div>
+
+        <div class="section">
+            <h2>📊 Latest Telemetry</h2>
+            <div class="data-grid">
+                <div class="data-item">
+                    <label>Device ID</label>
+                    <value id="deviceId">--</value>
+                </div>
+                <div class="data-item">
+                    <label>Status</label>
+                    <value id="status-value">--</value>
+                </div>
+                <div class="data-item">
+                    <label>Temperature</label>
+                    <value id="temperature">--</value>
+                </div>
+                <div class="data-item">
+                    <label>Voltage</label>
+                    <value id="voltage">--</value>
+                </div>
+                <div class="data-item">
+                    <label>Current</label>
+                    <value id="current">--</value>
+                </div>
+                <div class="data-item">
+                    <label>Energy</label>
+                    <value id="energy">--</value>
+                </div>
+            </div>
+            <div class="timestamp" id="telemetryTime">No data received yet</div>
+        </div>
+
+        <div class="section">
+            <h2>🚨 Latest Alert</h2>
+            <div id="alertContainer">
+                <div class="no-data">No alerts yet</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const WS_URL = 'ws://localhost:8000/ws/telemetry';
+        let ws;
+        let reconnectInterval;
+
+        function connect() {
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                updateConnectionStatus(true);
+                clearInterval(reconnectInterval);
+            };
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                console.log('Received:', message);
+
+                if (message.type === 'telemetry') {
+                    updateTelemetry(message.data);
+                } else if (message.type === 'alert') {
+                    updateAlert(message.data);
+                } else if (message.type === 'connection') {
+                    console.log(message.message);
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                updateConnectionStatus(false);
+                reconnectInterval = setInterval(() => {
+                    console.log('Attempting to reconnect...');
+                    connect();
+                }, 3000);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('status');
+            if (connected) {
+                statusEl.className = 'status connected';
+                statusEl.textContent = '🟢 Connected';
+            } else {
+                statusEl.className = 'status disconnected';
+                statusEl.textContent = '⚫ Disconnected';
+            }
+        }
+
+        function updateTelemetry(data) {
+            document.getElementById('deviceId').textContent = data.device_id;
+            document.getElementById('status-value').textContent = data.status;
+            document.getElementById('temperature').textContent = data.temperature.toFixed(1) + ' °C';
+            document.getElementById('voltage').textContent = data.voltage.toFixed(1) + ' V';
+            document.getElementById('current').textContent = data.current.toFixed(1) + ' A';
+            document.getElementById('energy').textContent = data.energy_kwh.toFixed(2) + ' kWh';
+            
+            const timestamp = new Date(data.timestamp).toLocaleString();
+            document.getElementById('telemetryTime').textContent = `Last updated: ${timestamp}`;
+        }
+
+        function updateAlert(alert) {
+            const container = document.getElementById('alertContainer');
+            const timestamp = new Date(alert.triggered_at).toLocaleString();
+            
+            container.innerHTML = `
+                <div class="alert-box ${alert.severity}">
+                    <div class="alert-type">${alert.alert_type.replace(/_/g, ' ')}</div>
+                    <div class="alert-message">${alert.message}</div>
+                    <div class="timestamp">Triggered: ${timestamp}</div>
+                </div>
+            `;
+        }
+
+        // Connect on page load
+        connect();
+    </script>
+</body>
+</html>

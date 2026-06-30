@@ -1,0 +1,38 @@
+{
+  "server": {
+    "nodeEnv": "development",
+    "apiPort": 3000,
+    "websocketPort": 3001
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "iot_telemetry",
+    "user": "postgres",
+    "password": "postgres",
+    "poolMin": 2,
+    "poolMax": 10
+  },
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "password": ""
+  },
+  "kafka": {
+    "brokers": ["localhost:9092"],
+    "clientId": "iot-telemetry-dev",
+    "groupId": "telemetry-processors-dev",
+    "topic": "telemetry.raw"
+  },
+  "opensearch": {
+    "node": "http://localhost:9200",
+    "username": "admin",
+    "password": "admin",
+    "index": "iot-alerts"
+  },
+  "application": {
+    "idempotencyTtlSeconds": 10,
+    "lateEventMaxMinutes": 5,
+    "offlineDeviceThresholdMinutes": 5
+  }
+}
