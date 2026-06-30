@@ -14,6 +14,10 @@ config/secrets/config.json
 !README.md
 docs/
 
+# Public folder and dashboard server
+public/
+src/dashboard-server.ts
+
 # Logs
 logs/
 *.log
