@@ -12,7 +12,7 @@ graph TB
     end
 
     subgraph API_GATEWAY["⚡ API GATEWAY LAYER"]
-        LB["Load Balancer<br/>(Nginx/ALB)<br/>• Round Robin<br/>• Health Checks<br/>• SSL Termination<br/>• Rate Limiting"]
+        LB["Load Balancer<br/>(Nginx - IPv4)<br/>• Round Robin<br/>• Health Checks<br/>• SSL Termination<br/>• Rate Limiting"]
         
         subgraph API_NODES["API Nodes (NestJS)"]
             API1["API Node 1<br/>Endpoints:<br/>• POST /telemetry<br/>• GET /devices/:id/latest<br/>• GET /alerts<br/>• POST /devices<br/>• GET /health"]
@@ -75,11 +75,9 @@ graph TB
 
     WEB["🌍 Web Clients (Browser)<br/>• Dashboard<br/>• Real-time telemetry<br/>• Real-time alerts<br/>• Device status"]
 
-    subgraph OBSERVABILITY["📊 MONITORING & OBSERVABILITY"]
-        PROM["Prometheus + Grafana<br/>Metrics:<br/>• api_requests_total<br/>• kafka_consumer_lag<br/>• db_query_duration<br/>• devices_active_total"]
-        LOGS["Winston + ELK Stack<br/>Structured Logging:<br/>• Correlation ID<br/>• JSON format<br/>• Log levels"]
-        TRACE["Jaeger<br/>Distributed Tracing:<br/>• Trace ID<br/>• Spans across services"]
-        ALERTS_SYS["PagerDuty/Slack<br/>System Alerts:<br/>• API error rate > 5%<br/>• Kafka lag > 1000<br/>• DB pool > 80%"]
+    subgraph ALERTS_DASHBOARD["📊 ALERTS & DASHBOARDS"]
+        OPENSEARCH["OpenSearch<br/>(Alerts Storage)<br/>Index: iot-alerts<br/>• Search alerts<br/>• Aggregations<br/>• Time queries"]
+        SUPERSET["Apache Superset<br/>(Dashboards)<br/>• Device Overview<br/>• Telemetry Charts<br/>• Alerts Dashboard<br/><br/>Data Sources:<br/>• PostgreSQL<br/>• OpenSearch"]
         HEALTH["Health Checks<br/>GET /health<br/>• Database: up/down<br/>• Redis: up/down<br/>• Kafka: up/down"]
     end
 
@@ -120,14 +118,10 @@ graph TB
     PUBSUB --> WS & EMAIL & PUSH
     WS --> WEB
 
-    %% Monitoring Connections
-    API1 & API2 & APIN -.->|"metrics"| PROM
-    PROC_CONSUMER -.->|"metrics"| PROM
-    API1 & API2 & APIN -.->|"logs"| LOGS
-    PROC_CONSUMER -.->|"logs"| LOGS
-    API1 & API2 & APIN -.->|"traces"| TRACE
-    PROC_CONSUMER -.->|"traces"| TRACE
-    PROM & LOGS -.->|"alerts"| ALERTS_SYS
+    %% Alerts & Dashboards
+    ALERT_ENGINE -->|"index alerts"| OPENSEARCH
+    DB -.->|"query telemetry"| SUPERSET
+    OPENSEARCH -.->|"query alerts"| SUPERSET
 
     %% Offline Detection
     CRON -.->|"checks"| DB
@@ -146,7 +140,7 @@ graph TB
     class PRODUCER,P0,P1,P2,C1,C2,CN kafkaClass
     class DB,REDIS_CACHE,ALERT_ENGINE,INVALID_DB storageClass
     class PUBSUB,WS,EMAIL,PUSH,WEB realtimeClass
-    class PROM,LOGS,TRACE,ALERTS_SYS,HEALTH,CRON monitorClass
+    class OPENSEARCH,SUPERSET,HEALTH,CRON monitorClass
 ```
 
 ---
@@ -257,11 +251,9 @@ graph LR
         PUSH[Push Service]
     end
 
-    subgraph Monitoring_Layer["Monitoring Layer"]
-        PROM[Prometheus]
-        GRAFANA[Grafana]
-        ELK[ELK Stack]
-        JAEGER[Jaeger]
+    subgraph Dashboard_Layer["Alerts & Dashboards"]
+        OPENSEARCH[OpenSearch]
+        SUPERSET[Apache Superset]
     end
 
     IOT -->|HTTPS| LB
@@ -277,6 +269,7 @@ graph LR
     
     ALERT --> POSTGRES
     ALERT --> PUBSUB
+    ALERT -->|Index| OPENSEARCH
     
     PUBSUB --> WS
     PUBSUB --> EMAIL
@@ -284,15 +277,9 @@ graph LR
     
     WS -->|WebSocket| BROWSER
     
-    API -.->|Metrics| PROM
-    CONSUMER -.->|Metrics| PROM
-    PROM --> GRAFANA
-    
-    API -.->|Logs| ELK
-    CONSUMER -.->|Logs| ELK
-    
-    API -.->|Traces| JAEGER
-    CONSUMER -.->|Traces| JAEGER
+    POSTGRES -.->|Query| SUPERSET
+    OPENSEARCH -.->|Query| SUPERSET
+    SUPERSET -->|View| BROWSER
 
     classDef external fill:#e1f5ff,stroke:#01579b
     classDef api fill:#fff3e0,stroke:#e65100
@@ -306,7 +293,7 @@ graph LR
     class KAFKA,CONSUMER queue
     class POSTGRES,REDIS storage
     class ALERT,PUBSUB,WS,EMAIL,PUSH realtime
-    class PROM,GRAFANA,ELK,JAEGER monitor
+    class OPENSEARCH,SUPERSET monitor
 ```
 
 ---
@@ -516,3 +503,67 @@ graph LR
 - Use the **Scaling Strategy** for capacity planning
 - Use the **Alert Rules Flow** for alert logic
 - Use the **Redis Pub/Sub Fanout** for real-time architecture
+
+---
+
+## 🎯 **Simplified Architecture Summary (Interview-Ready)**
+
+### **Key Components (Easy to Explain)**
+
+1. **Load Balancer (Nginx - IPv4)**
+   - Simple round-robin load balancing
+   - SSL termination
+   - Rate limiting
+
+2. **API Layer (NestJS)**
+   - Authentication, validation, idempotency
+   - Produces to Kafka
+
+3. **Kafka (Message Queue)**
+   - 3 partitions for scalability
+   - Reliable message delivery
+
+4. **Processor Consumer**
+   - Reads from Kafka
+   - Stores in PostgreSQL
+   - Evaluates alerts
+   - Publishes to Redis Pub/Sub
+
+5. **PostgreSQL + TimescaleDB**
+   - Stores telemetry and alerts
+   - Time-series optimized
+
+6. **Redis**
+   - Cache (latest device data)
+   - Pub/Sub (real-time broadcast)
+
+7. **OpenSearch (Alerts Only)**
+   - Stores alerts for search and analysis
+   - Easy to query by device, severity, time
+
+8. **Apache Superset (Dashboards)**
+   - Connects to PostgreSQL (telemetry)
+   - Connects to OpenSearch (alerts)
+   - Creates charts and dashboards
+
+9. **WebSocket Server**
+   - Subscribes to Redis Pub/Sub
+   - Broadcasts to web clients
+
+### **Why This Stack?**
+
+- **Simple to deploy:** All components run in Docker
+- **Easy to explain:** Clear separation of concerns
+- **Production-ready:** Handles 1000s of devices
+- **Scalable:** Can grow to 100K devices
+- **Interview-friendly:** Not over-engineered
+
+### **What We Removed (Kept Simple)**
+
+❌ Prometheus + Grafana (complex metrics)  
+❌ ELK Stack (complex logging)  
+❌ Jaeger (complex tracing)  
+❌ PagerDuty/Slack (system alerts)  
+
+✅ **Kept:** OpenSearch (alerts only) + Superset (dashboards)  
+✅ **Result:** Simpler, easier to explain, still production-grade!
