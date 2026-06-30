@@ -51,12 +51,12 @@ graph TB
     end
 
     subgraph PROCESSING["⚙️ PROCESSING & STORAGE LAYER"]
-        PROC_CONSUMER["Processor Consumer<br/>For each batch (500 msgs):<br/>1. Parse messages<br/>2. Batch INSERT to DB<br/>3. Update Redis cache<br/>4. Evaluate alert rules<br/>5. Store alerts in DB<br/>6. Publish to Redis Pub/Sub<br/>7. Commit Kafka offsets"]
+        PROC_CONSUMER["Processor Consumer<br/>For each batch (500 msgs):<br/>1. Parse messages<br/>2. Batch INSERT to DB<br/>3. Evaluate alert rules<br/>4. Store alerts in DB<br/>5. Publish to Redis Pub/Sub<br/>6. Commit Kafka offsets"]
         
         subgraph STORAGE["Storage Components"]
             DB[("PostgreSQL + TimescaleDB<br/>Tables:<br/>1. devices<br/>2. telemetry (hypertable)<br/>3. alerts<br/>4. invalid_messages<br/><br/>UNIQUE: (device_id, timestamp, message_id)<br/>Scaling: Read replicas, Sharding, Compression (90%)")]
             
-            REDIS_CACHE[("Redis Cache<br/>Keys:<br/>• device:{id}:latest (TTL: 24h)<br/>• idempotency:{id} (TTL: 10s)<br/><br/>Performance:<br/>• GET: < 1ms<br/>• SET: < 1ms<br/><br/>Scaling: Redis Cluster (3-6 nodes)")]
+            REDIS_CACHE[("Redis<br/>Keys:<br/>• idempotency:{id} (TTL: 10s)<br/><br/>Performance:<br/>• GET: < 1ms<br/>• SET: < 1ms")]
             
             ALERT_ENGINE["Alert Engine<br/>Rules:<br/>1. Temp > 30°C (HIGH)<br/>2. Temp > 50°C (CRITICAL)<br/>3. Energy spike > 50% (MEDIUM)<br/>4. Device offline (HIGH)<br/>5. Voltage abnormal (MEDIUM)<br/>6. Current > 80A (HIGH)<br/>7. All zeros (MEDIUM)<br/>8. Rapid changes (MEDIUM)<br/><br/>Output:<br/>• Store in alerts table<br/>• Publish to Redis Pub/Sub"]
         end
@@ -107,7 +107,6 @@ graph TB
     %% Processing Connections
     C1 & C2 & CN --> PROC_CONSUMER
     PROC_CONSUMER --> DB
-    PROC_CONSUMER --> REDIS_CACHE
     PROC_CONSUMER --> ALERT_ENGINE
     ALERT_ENGINE --> DB
     ALERT_ENGINE --> PUBSUB
@@ -532,7 +531,7 @@ graph LR
    - Time-series optimized
 
 6. **Redis**
-   - Cache (latest device data)
+   - Idempotency (10s TTL) - API layer
    - Pub/Sub (real-time broadcast)
 
 7. **OpenSearch (Alerts Only)**
