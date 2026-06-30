@@ -477,34 +477,6 @@ graph LR
 
 ---
 
-## How to Use These Diagrams
-
-1. **Copy the Mermaid code** from any section above
-2. **Paste into:**
-   - GitHub README.md (renders automatically)
-   - Mermaid Live Editor: https://mermaid.live
-   - VS Code with Mermaid extension
-   - Notion, Confluence, or other tools that support Mermaid
-
-3. **Customize colors, labels, or structure** as needed
-
----
-
-## Notes
-
-- All diagrams are **production-ready** and cover the complete architecture
-- Use the **Complete System Architecture** for high-level overview
-- Use the **Simplified Data Flow** for explaining request flow
-- Use the **Component Interaction** for system integration
-- Use the **Database Schema** for data modeling
-- Use the **Scaling Strategy** for capacity planning
-- Use the **Alert Rules Flow** for alert logic
-- Use the **Redis Pub/Sub Fanout** for real-time architecture
-
----
-
-## 🎯 **Simplified Architecture Summary (Interview-Ready)**
-
 ### **Key Components (Easy to Explain)**
 
 1. **Load Balancer (Nginx - IPv4)**
@@ -547,20 +519,6 @@ graph LR
    - Subscribes to Redis Pub/Sub
    - Broadcasts to web clients
 
-### **Why This Stack?**
-
-- **Simple to deploy:** All components run in Docker
-- **Easy to explain:** Clear separation of concerns
-- **Production-ready:** Handles 1000s of devices
-- **Scalable:** Can grow to 100K devices
-- **Interview-friendly:** Not over-engineered
-
-### **What We Removed (Kept Simple)**
-
-❌ Prometheus + Grafana (complex metrics)  
-❌ ELK Stack (complex logging)  
-❌ Jaeger (complex tracing)  
-❌ PagerDuty/Slack (system alerts)  
 
 ✅ **Kept:** OpenSearch (alerts only) + Superset (dashboards)  
 ✅ **Result:** Simpler, easier to explain, still production-grade!
